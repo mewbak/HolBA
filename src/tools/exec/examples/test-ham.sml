@@ -3,9 +3,10 @@ open bslSyntax;
 
 open bir_execLib;
 
+(*
 open bir_ppLib;
-
 val _ = install_bir_pretty_printers();
+*)
 
 val _ = Parse.current_backend := PPBackEnd.vt100_terminal;
 
@@ -372,16 +373,21 @@ BirProgram
          bb_last_statement := BStmt_Halt (BExp_Den (BVar "R18" (BType_Imm Bit64)))|>]
 ``);
 
-val prog_ldld_w_obs = prog_ldld_w_obs_reduced;
+val prog_ldld_w_obs = prog_ldld_w_obs_full;
 val input_select_2  = true;
 
 val (name, prog) = prog_ldld_w_obs;
 
-val r0_1  = ``0x8000000000030000w:word64``
-val r18_1 = ``0x1FFFFFFFFFFFFE00w:word64``
+(*
+exp_id
+arm8/exps2/exp_cache_multiw/269c03c7a99a2a222bc8fee1ba30a6984df76f2b
+*)
 
-val r0_2  = ``0x8000000000000000w:word64``
-val r18_2 = ``0xEFFFFFFFFFFFFE20w:word64``
+val r0_1  = ``0x80000000000a0000w:word64``
+val r18_1 = ``0x00000000800fff02w:word64``
+
+val r0_2  = ``0x0000000000cb0000w:word64``
+val r18_2 = ``0x00000000800fff00w:word64``
 
 val prog_par_r0_wtm  = if input_select_2 then r0_2  else r0_1;
 val prog_par_r18_wtm = if input_select_2 then r18_2 else r18_1;
