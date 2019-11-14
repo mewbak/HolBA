@@ -426,6 +426,15 @@ val bir_symb_exec_step_def = Define `
 
 (* connecting the states after one step *)
 val bir_symb_exec_step_THM = store_thm("bir_symb_exec_step_THM", ``
+(*
+  (* we may require well-typed env
+       -> see bir_valopt_to_const_def
+       -> and also for using theorems about types after reading,
+          can be inductively reenabled using theorems about
+          well-typed environment preservation for writing
+   *)
+  (bir_is_well_typed_env bst.bst_environ) ==>
+*)
   (bsst = bir_symb_state_cstr bst pred) ==>
 
   ((oo,bst') = bir_exec_step p bst) ==>
