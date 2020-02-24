@@ -165,7 +165,7 @@ METIS_TAC [pred_setTheory.IN_UNION]
 (* also post is usually a map that depends on the end state address *)
 val weak_triple_def = Define `
   weak_triple m (l:'a) (ls:'a->bool) pre post =
-  !ms .
+  !ms.
    ((m.pc ms) = l) ==> (pre ms) ==>
    ?ms'. ((m.weak ms ls ms') /\
     (post ms'))
