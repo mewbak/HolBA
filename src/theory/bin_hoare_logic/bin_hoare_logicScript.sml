@@ -23,26 +23,27 @@ val _ = Datatype `bin_model_t =
 val weak_model_def = Define `
   weak_model m =
     !ms ls ms'.
-      (m.weak ms ls ms') =
+      m.weak ms ls ms' =
         ?n.
-          ((n > 0) /\
+          (n > 0 /\
            (FUNPOW_OPT m.trs n ms = SOME ms') /\
-           ((m.pc ms') IN ls)
+           m.pc ms' IN ls
           ) /\
           !n'.
-            (((n' < n) /\ (n' > 0)) ==>
+            n' < n /\ n' > 0 ==>
             ?ms''.
               (FUNPOW_OPT m.trs n' ms = SOME ms'') /\
-              (~((m.pc ms'') IN ls))
-            )`;
+              m.pc ms'' NOTIN ls`;
 
 
 val weak_comp_thm = prove(``
   !m.
   weak_model m ==>
   !ms ls1 ls2 ms' ms''.
-  (m.weak ms (ls1 UNION ls2) ms') ==> (~((m.pc ms') IN ls2)) ==>
-  (m.weak ms' ls2 ms'') ==> (m.weak ms ls2 ms'')``,
+  m.weak ms (ls1 UNION ls2) ms' ==>
+  m.pc ms' NOTIN ls2 ==>
+  m.weak ms' ls2 ms'' ==>
+  m.weak ms ls2 ms''``,
 
 REPEAT STRIP_TAC >>
 REV_FULL_SIMP_TAC std_ss [weak_model_def] >>
@@ -66,10 +67,10 @@ REV_FULL_SIMP_TAC arith_ss []
 
 val weak_unique_thm = prove(``
   !m.
-  (weak_model m) ==>
+  weak_model m ==>
   !ms ls ms' ms''.
-  (m.weak ms ls ms') ==>
-  (m.weak ms ls ms'') ==>
+  m.weak ms ls ms' ==>
+  m.weak ms ls ms'' ==>
   (ms' = ms'')
 ``,
 
@@ -91,9 +92,9 @@ val weak_union_thm = prove(``
   !m.
   weak_model m ==>
   !ms ls1 ls2 ms'.
-  (m.weak ms (ls1 UNION ls2) ms') ==>
-  (~ ((m.pc ms') IN ls1)) ==>
-  (m.weak ms ls2 ms')``,
+  m.weak ms (ls1 UNION ls2) ms' ==>
+  m.pc ms' NOTIN ls1 ==>
+  m.weak ms ls2 ms'``,
 
 REPEAT STRIP_TAC >>
 REV_FULL_SIMP_TAC std_ss [weak_model_def] >>
@@ -105,9 +106,9 @@ val weak_union2_thm = prove(``
   !m.
   weak_model m ==>
   !ms ls1 ls2 ms'.
-  (m.weak ms (ls1 UNION ls2) ms') ==>
-  (((m.pc ms') IN ls2)) ==>
-  (m.weak ms ls2 ms')``,
+  m.weak ms (ls1 UNION ls2) ms' ==>
+  m.pc ms' IN ls2 ==>
+  m.weak ms ls2 ms'``,
 
 REPEAT STRIP_TAC >>
 REV_FULL_SIMP_TAC std_ss [weak_model_def] >>
@@ -119,9 +120,9 @@ val weak_union_singleton_thm = prove(``
   !m.
   weak_model m ==>
   !ms l1 ls2 ms'.
-  (m.weak ms ({l1} UNION ls2) ms') ==>
-  ((m.pc ms') <> l1) ==>
-  (m.weak ms ls2 ms')``,
+  m.weak ms ({l1} UNION ls2) ms' ==>
+  (m.pc ms' <> l1) ==>
+  m.weak ms ls2 ms'``,
 
 METIS_TAC [weak_union_thm, pred_setTheory.IN_SING]
 );
@@ -130,7 +131,8 @@ val weak_singleton_pc_thm = prove(``
   !m.
   weak_model m ==>
   !ms e ms'.
-  (m.weak ms {e} ms') ==> ((m.pc ms') = e)``,
+  m.weak ms {e} ms' ==>
+  (m.pc ms' = e)``,
 
 METIS_TAC [weak_model_def, pred_setTheory.IN_SING]
 );
@@ -140,7 +142,8 @@ val weak_pc_in_thm = prove(``
   !m.
   weak_model m ==>
   !ms ls ms'.
-  (m.weak ms ls ms') ==> ((m.pc ms') IN ls)``,
+  m.weak ms ls ms' ==>
+  m.pc ms' IN ls``,
 
 METIS_TAC [weak_model_def]
 );
@@ -149,9 +152,9 @@ val weak_union_pc_not_in_thm = store_thm("weak_union_pc_not_in_thm",
   ``!m.
     weak_model m ==>
     !ms e ls1 ls2 ms'.
-    (m.weak ms (ls1 UNION ls2) ms') ==>
-    (~((m.pc ms') IN ls2)) ==>
-    (m.weak ms ls1 ms')``,
+    m.weak ms (ls1 UNION ls2) ms' ==>
+    m.pc ms' NOTIN ls2 ==>
+    m.weak ms ls1 ms'``,
 
 REPEAT STRIP_TAC >>
 REV_FULL_SIMP_TAC std_ss [weak_model_def] >>
@@ -165,10 +168,10 @@ METIS_TAC [pred_setTheory.IN_UNION]
 (* also post is usually a map that depends on the end state address *)
 val weak_triple_def = Define `
   weak_triple m (l:'a) (ls:'a->bool) pre post =
-  !ms .
-   ((m.pc ms) = l) ==> (pre ms) ==>
-   ?ms'. ((m.weak ms ls ms') /\
-    (post ms'))
+    !ms.
+      (m.pc ms = l) ==>
+      pre ms ==>
+      ?ms'. m.weak ms ls ms' /\ post ms'
 `;
 
 
@@ -197,8 +200,8 @@ FULL_SIMP_TAC std_ss []
 
 val weak_case_rule_thm = prove(``
 !m l ls pre post C1.
-  weak_triple m l ls (\ms. (pre ms) /\ (C1 ms)) post ==>
-  weak_triple m l ls (\ms. (pre ms) /\ (~(C1 ms))) post ==>
+  weak_triple m l ls (\ms. pre ms /\ C1 ms) post ==>
+  weak_triple m l ls (\ms. pre ms /\ ~(C1 ms)) post ==>
   weak_triple m l ls pre post
 ``,
 
@@ -209,11 +212,10 @@ METIS_TAC []
 
 val weak_weakening_rule_thm =
   store_thm("weak_weakening_rule_thm",
-  ``!m. 
-    !l ls pre1 pre2 post1 post2.
+  ``!m l ls pre1 pre2 post1 post2.
     weak_model m ==>
-    (!ms. ((m.pc ms) = l) ==> (pre2 ms) ==> (pre1 ms)) ==>
-    (!ms. ((m.pc ms) IN ls) ==> (post1 ms) ==> (post2 ms)) ==>
+    (!ms. (m.pc ms = l) ==> pre2 ms ==> pre1 ms) ==>
+    (!ms. m.pc ms IN ls ==> post1 ms ==> post2 ms) ==>
     weak_triple m l ls pre1 post1 ==>
     weak_triple m l ls pre2 post2
   ``,
@@ -227,9 +229,9 @@ METIS_TAC [weak_pc_in_thm]
 
 val weak_subset_rule_thm =
  store_thm("weak_subset_rule_thm",
-  ``!m.  ! l ls1 ls2 pre post .
+  ``!m l ls1 ls2 pre post .
     weak_model m ==>
-    (!ms. ((post ms) ==> (~((m.pc ms) IN ls2)))) ==>
+    (!ms. post ms ==> m.pc ms NOTIN ls2) ==>
     weak_triple m l (ls1 UNION ls2) pre post ==>
     weak_triple m l ls1 pre post``,
 
@@ -245,21 +247,22 @@ val weak_seq_rule_thm = store_thm("weak_seq_rule_thm",
   ``!m l ls1 ls2 pre post.
     weak_model m ==>
     weak_triple m l (ls1 UNION ls2) pre post ==>
-    (!l1. (l1 IN ls1) ==>
-    (weak_triple m l1 ls2 post post)) ==>
+    (!l1. l1 IN ls1 ==>
+          weak_triple m l1 ls2 post post
+    ) ==>
     weak_triple m l ls2 pre post``,
 
 REPEAT STRIP_TAC >>
 SIMP_TAC std_ss [weak_triple_def] >>
 REPEAT STRIP_TAC >>
-PAT_X_ASSUM ``(weak_triple m l (ls1 UNION ls2) pre  post)``
+PAT_X_ASSUM ``weak_triple m l (ls1 UNION ls2) pre  post``
               (fn thm => ASSUME_TAC (SIMP_RULE std_ss [weak_triple_def] thm)) >>
 QSPECL_X_ASSUM ``!x.P`` [`ms`] >>
 REV_FULL_SIMP_TAC std_ss [] >>
-Cases_on `(m.pc ms') IN ls2` >- (
+Cases_on `m.pc ms' IN ls2` >- (
   METIS_TAC [weak_union2_thm]
 ) >>
-Q.SUBGOAL_THEN `(m.pc ms') IN ls1` ASSUME_TAC >- (
+Q.SUBGOAL_THEN `m.pc ms' IN ls1` ASSUME_TAC >- (
   METIS_TAC [weak_union_thm, weak_pc_in_thm]
 ) >>
 QSPECL_X_ASSUM  ``!l1. _`` [`m.pc ms'`] >>
@@ -277,7 +280,7 @@ val weak_conj_rule_thm = prove(``
   !l ls pre post1 post2.
   weak_triple m l ls pre post1 ==>
   weak_triple m l ls pre post2 ==>
-  weak_triple m l ls pre (\ms. (post1 ms) /\ (post2 ms))``,
+  weak_triple m l ls pre (\ms. post1 ms /\ post2 ms)``,
 
 REPEAT STRIP_TAC >>
 FULL_SIMP_TAC std_ss [weak_triple_def] >>
@@ -285,59 +288,169 @@ REPEAT STRIP_TAC >>
 METIS_TAC [weak_unique_thm]
 );
 
+(*
+val weak_loop_step_def = Define `
+  weak_loop_step m ms var l le invariant C1 =
+    let x:num = var ms in
+      (\ms'. m.weak ms ({l} UNION le) ms' /\
+             (invariant ms /\ C1 ms) /\
+             ((m.pc ms' = l) /\ invariant ms' /\ (var ms' < x) /\ (var ms' >= 0))
+      )
+`;
+*)
 
+(* TODO: Address minimum? (var ms' >= 0)
+ *       Should this have assumption "WF wf_rel"?*)
 
 val weak_loop_step_def = Define `
- weak_loop_step m ms var l le invariant C1 =
- let x:num = var ms in
- (\ms'. (m.weak ms ({l} UNION le) ms') /\
-       ((invariant ms) /\ (C1 ms)) /\
-       (((m.pc ms')=l) /\ (invariant ms') /\ ((var ms') < x) /\ ((var ms') >= 0))
-       )
-       `;
-
-val loop_fun_defn =
-       Hol_defn "loop_fun" `
-loop_fun m ms var l le invariant C1  =
-let MS' = weak_loop_step m ms var l le invariant C1 in
-if MS' = {} then ms
-else let ms' = (CHOICE MS') in
-  (loop_fun m ms' var l le invariant C1)
+  weak_loop_step m ms wf_rel var l le invariant C1 =
+    let x = var ms in
+      (\ms'. (*(WF wf_rel) ==> *) (WF wf_rel) /\
+             m.weak ms ({l} UNION le) ms' /\
+             (invariant ms /\ C1 ms) /\
+             ((m.pc ms' = l) /\ invariant ms' /\ (wf_rel (var ms') x))
+      )
 `;
-
 (*
+val loop_fun_defn =
+  Hol_defn "loop_fun" `
+    loop_fun m ms wf_rel var l le invariant C1  =
+      let MS' = weak_loop_step m ms wf_rel var l le invariant C1 in
+        if MS' = {}
+        then ms
+	else let ms' = (CHOICE MS') in
+	       (loop_fun m ms' wf_rel var l le invariant C1)
+`;
+*)
+(* For debugging:
 Defn.tgoal loop_fun_defn
 *)
-val (loop_fun_eqns, loop_fun_ind) = Defn.tprove(loop_fun_defn,
-  FULL_SIMP_TAC std_ss [weak_loop_step_def] >>
-  WF_REL_TAC `measure (\(m, ms,var,l,le,invariant,C1). var ms)` >>
-  REPEAT STRIP_TAC >>
+(*
+``?R'.
+       WF R' /\
+       !C1 invariant le l wf_rel var ms m MS' ms'.
+           (MS' = weak_loop_step m ms wf_rel var l le invariant C1) /\
+           MS' <> {} /\ (ms' = CHOICE MS') ==>
+           R' (m,ms',wf_rel,var,l,le,invariant,C1)
+             (m,ms,wf_rel,var,l,le,invariant,C1)``
+
+REPEAT STRIP_TAC >>
+FULL_SIMP_TAC std_ss [weak_loop_step_def] >>
+Q.EXISTS_TAC `\(m, ms,wf_rel,var,l,le,invariant,C1) (m, ms',wf_rel,var,l,le,invariant,C1). wf_rel  (var ms) (var ms')` >>
+REPEAT STRIP_TAC >| [
+  (* This we need to have as assumption... *)
+Q.EXISTS_TAC `\(m, ms,wf_rel',var,l,le,invariant,C1) (m, ms',wf_rel',var,l,le,invariant,C1). wf_rel (var ms) (var ms')` >>
+  cheat,
+
+  (* From assumption to be added... *)
   REV_FULL_SIMP_TAC std_ss [LET_DEF] >>
+  FULL_SIMP_TAC std_ss [] >>
   Q.ABBREV_TAC `MS' =  (\ms'.
-               m.weak ms ({l} UNION le) ms' /\ (invariant ms /\ C1 ms) /\
-               ((m.pc ms') = l) /\ invariant ms' /\ var ms' < var ms)` >>
+	       WF wf_rel /\ m.weak ms ({l} UNION le) ms' /\ (invariant ms /\ C1 ms) /\
+	       ((m.pc ms') = l) /\ invariant ms' /\ wf_rel (var ms') (var ms))` >>
   ASSUME_TAC (ISPEC ``MS':'a->bool`` pred_setTheory.CHOICE_DEF)  >>
   REV_FULL_SIMP_TAC std_ss [] >>
   FULL_SIMP_TAC std_ss [Abbr `MS'`, pred_setTheory.IN_ABS]
+]
+*)
+(* TODO: Look at the resulting loop_fun_ind, see if you can prove it separately...*)
+val loop_fun_ind = prove(
+``!P.
+  (!m ms wf_rel var l le invariant C1.
+       (!MS' ms'.
+	    (MS' = weak_loop_step m ms wf_rel var l le invariant C1) /\
+	    MS' <> {} /\ (ms' = CHOICE MS') ==>
+	    P m ms' wf_rel var l le invariant C1) ==>
+       P m ms wf_rel var l le invariant C1) ==>
+  !v v1 v2 v3 v4 v5 v6 v7. P v v1 v2 v3 v4 v5 v6 v7``,
+
+REPEAT STRIP_TAC >>
+FULL_SIMP_TAC std_ss [weak_loop_step_def] >>
+QSPECL_X_ASSUM ``!m. _`` [`v`, `v1`, `v2`, `v3`, `v4`, `v5`, `v6`, `v7`] >>
+Cases_on `WF v2` >>
+  REV_FULL_SIMP_TAC std_ss [LET_DEF] >>
+
+  Q.ABBREV_TAC `MS' =  (λms'.
+          WF v2 ∧ v.weak v1 ({v4} ∪ v5) ms' ∧ (v6 v1 ∧ v7 v1) ∧
+          (v.pc ms' = v4) ∧ v6 ms' ∧ v2 (v3 ms') (v3 v1))` >>
+ ASSUME_TAC (ISPEC ``MS':'a->bool`` pred_setTheory.CHOICE_DEF)  >>
+  subgoal `MS' <> {}` >- (
+    cheat
+  ) >>
+FULL_SIMP_TAC std_ss [] >>
+cheat
 );
 
 
+
+(*
+val (loop_fun_eqns, loop_fun_ind) =
+  Defn.tprove(loop_fun_defn,
+
+FULL_SIMP_TAC std_ss [weak_loop_step_def] >>
+Q.EXISTS_TAC `\(m, ms,wf_rel,var,l,le,invariant,C1) (m, ms',wf_rel,var,l,le,invariant,C1). wf_rel (var ms) (var ms')` >>
+REPEAT STRIP_TAC >| [
+  (* This we need to have as assumption... *)
+  cheat,
+
+  (* From assumption to be added... *)
+  subgoal `WF wf_rel` >- (
+    cheat
+  ) >>
+  REV_FULL_SIMP_TAC std_ss [LET_DEF] >>
+  FULL_SIMP_TAC std_ss [] >>
+  Q.ABBREV_TAC `MS' =  (\ms'.
+	       m.weak ms ({l} UNION le) ms' /\ (invariant ms /\ C1 ms) /\
+	       ((m.pc ms') = l) /\ invariant ms' /\ wf_rel (var ms') (var ms))` >>
+  ASSUME_TAC (ISPEC ``MS':'a->bool`` pred_setTheory.CHOICE_DEF)  >>
+  REV_FULL_SIMP_TAC std_ss [] >>
+  FULL_SIMP_TAC std_ss [Abbr `MS'`, pred_setTheory.IN_ABS]
+]
+);
+*)
+
 val weak_loop_contract_def = Define `
-  weak_loop_contract m l le invariant C1 var =
-    (~(l IN le)) /\
-    (!x. (weak_triple m l ({l} UNION le) (\ms. (invariant ms) /\ (C1 ms) /\ ((var ms) = x:num))
-         (\ms.(((m.pc ms)=l) /\ (invariant ms) /\ ((var ms) < x) /\ ((var ms) >= 0)))))
+  weak_loop_contract m l le invariant C1 wf_rel var =
+    l NOTIN le /\ WF wf_rel /\
+    (!x. (weak_triple m l ({l} UNION le) (\ms. invariant ms /\ C1 ms /\ (var ms = x))
+         (\ms. (m.pc ms = l) /\ invariant ms /\ (wf_rel (var ms) x))))
 `;
 
-val inductive_invariant_goal = (fst o dest_imp o concl ) (
-Q.SPEC `(\m ms var l le invariant C1.
+val inductive_invariant_goal =
+  (fst o dest_imp o concl) (
+Q.SPEC `(\m ms wf_rel var l le invariant C1.
 weak_model m ==>
-weak_loop_contract m l le invariant C1 var ==>
+WF wf_rel ==>
+weak_loop_contract m l le invariant C1 wf_rel var ==>
 weak_triple m l le (\ms. (invariant ms) /\ (~(C1 ms))) post ==>
 ((invariant ms) /\ ((m.pc ms) = l) /\ (C1 ms)) ==>
- (?ms'. ((m.weak ms le ms') /\ (post ms'))))` loop_fun_ind);
+ (?ms'. ((m.weak ms le ms') /\ (post ms'))))` loop_fun_ind
+  );
 
+(*
+   ``!m ms wf_rel var l le invariant C1.
+         (!MS' ms'.
+              (MS' = weak_loop_step m ms wf_rel var l le invariant C1) /\
+              MS' <> {} /\ (ms' = CHOICE MS') ==>
+              (\m ms wf_rel var l le invariant C1.
+                   weak_model m ==>
+                   WF wf_rel ==>
+                   weak_loop_contract m l le invariant C1 wf_rel var ==>
+                   weak_triple m l le (\ms. invariant ms /\ ~C1 ms) post ==>
+                   invariant ms /\ (m.pc ms = l) /\ C1 ms ==>
+                   ?ms'. m.weak ms le ms' /\ post ms') m ms' wf_rel var l le
+                invariant C1) ==>
+         (\m ms wf_rel var l le invariant C1.
+              weak_model m ==>
+              WF wf_rel ==>
+              weak_loop_contract m l le invariant C1 wf_rel var ==>
+              weak_triple m l le (\ms. invariant ms /\ ~C1 ms) post ==>
+              invariant ms /\ (m.pc ms = l) /\ C1 ms ==>
+              ?ms'. m.weak ms le ms' /\ post ms') m ms wf_rel var l le
+           invariant C1``
+*)
 
+(* Below is still TODO... *)
 val inductive_invariant_thm = prove(``
 ^inductive_invariant_goal
 ``,
@@ -346,12 +459,12 @@ REPEAT STRIP_TAC >>
 FULL_SIMP_TAC std_ss [] >>
 REPEAT STRIP_TAC >>
 (* We first prove that one iteration works *)
-SUBGOAL_THEN ``(weak_loop_step m ms var l le invariant C1) <> {}`` ASSUME_TAC  >- (
+subgoal `(weak_loop_step m ms wf_rel var l le invariant C1) <> {}`  >- (
   SIMP_TAC std_ss [weak_loop_step_def, LET_DEF] >>
   FULL_SIMP_TAC std_ss [weak_loop_contract_def] >>
-  QSPECL_X_ASSUM ``!x. _`` [`(var (ms)):num`] >>
+  QSPECL_X_ASSUM ``!x. _`` [`var ms`] >>
   FULL_SIMP_TAC std_ss [weak_triple_def] >>
-  QSPECL_X_ASSUM ``!x. _`` [`ms`] >>
+  QSPECL_X_ASSUM ``!ms'. _`` [`ms`] >>
   REV_FULL_SIMP_TAC std_ss [] >>
   FULL_SIMP_TAC std_ss [GSYM pred_setTheory.MEMBER_NOT_EMPTY] >>
   EXISTS_TAC ``ms'':'a`` >>
@@ -359,21 +472,21 @@ SUBGOAL_THEN ``(weak_loop_step m ms var l le invariant C1) <> {}`` ASSUME_TAC  >
 ) >>
 FULL_SIMP_TAC std_ss [] >>
 
-Q.ABBREV_TAC `MS' = (weak_loop_step m ms var l le invariant C1)` >>
+Q.ABBREV_TAC `MS' = (weak_loop_step m ms wf_rel var l le invariant C1)` >>
 Q.ABBREV_TAC `ms' = CHOICE MS'` >>
 
 (* We prove that the invariant is preserved *)
-SUBGOAL_THEN ``(weak_loop_step m ms var l le invariant C1) ms'`` ASSUME_TAC >- (
+SUBGOAL_THEN ``(weak_loop_step m ms wf_rel var l le invariant C1) ms'`` ASSUME_TAC >- (
   FULL_SIMP_TAC std_ss [Abbr `ms'`] >>
   ASSUME_TAC (ISPEC ``MS':'a->bool`` pred_setTheory.CHOICE_DEF) >>
   REV_FULL_SIMP_TAC std_ss [pred_setTheory.SPECIFICATION]
 ) >>
 Q.SUBGOAL_THEN `invariant ms'` ASSUME_TAC >- (
-  FULL_SIMP_TAC std_ss [ weak_loop_step_def, LET_DEF]
+  FULL_SIMP_TAC std_ss [weak_loop_step_def, LET_DEF]
 ) >>
 FULL_SIMP_TAC std_ss [] >>
 Q.SUBGOAL_THEN `(m.pc ms') = l` ASSUME_TAC >- (
-  FULL_SIMP_TAC std_ss [ weak_loop_step_def, LET_DEF]
+  FULL_SIMP_TAC std_ss [weak_loop_step_def, LET_DEF]
 ) >>
 FULL_SIMP_TAC std_ss [] >>
 
@@ -411,9 +524,10 @@ REV_FULL_SIMP_TAC (std_ss) [SINGLETONS_UNION_thm] >>
 
 val invariant_rule_tmp_thm = 
 MP 
-(Q.SPEC `(\m ms var l le invariant C1.
+(Q.SPEC `(\m ms wf_rel var l le invariant C1.
 weak_model m ==>
-weak_loop_contract m l le invariant C1 var ==>
+WF wf_rel ==>
+weak_loop_contract m l le invariant C1 wf_rel var ==>
 weak_triple m l le (\ms. (invariant ms) /\ (~(C1 ms))) post ==>
 ((invariant ms) /\ ((m.pc ms) = l) /\ (C1 ms)) ==>
  (?ms'. ((m.weak ms le ms') /\ (post ms'))))` loop_fun_ind) inductive_invariant_thm;
@@ -421,15 +535,16 @@ weak_triple m l le (\ms. (invariant ms) /\ (~(C1 ms))) post ==>
 val weak_invariant_rule_thm = store_thm("weak_invariant_rule_thm",
   ``!m.
     weak_model m ==>
-    !l le invariant C1 var post.
-    weak_loop_contract m l le invariant C1 var ==>
+    !l le invariant C1 wf_rel var post.
+    WF wf_rel ==>
+    weak_loop_contract m l le invariant C1 wf_rel var ==>
     weak_triple m l le (\ms. (invariant ms) /\ (~(C1 ms))) post ==>
     weak_triple m l le invariant post``,
 
 REPEAT STRIP_TAC >>
 SIMP_TAC std_ss [weak_triple_def] >>
 REPEAT STRIP_TAC >>
-ASSUME_TAC (Q.SPECL [`m`, `ms`, `var`, `l`, `le`, `invariant`, `C1`] invariant_rule_tmp_thm) >>
+ASSUME_TAC (Q.SPECL [`m`, `ms`, `wf_rel`, `var`, `l`, `le`, `invariant`, `C1`] invariant_rule_tmp_thm) >>
 FULL_SIMP_TAC std_ss [] >>
 REV_FULL_SIMP_TAC std_ss [] >>
 Cases_on `C1 ms` >- (
